@@ -1,29 +1,72 @@
+from typing import Literal, Tuple
 import yfinance as yf
-from typing import Literal
+import requests
+
+MarketType = Literal["stock", "crypto"]
 
 
-def get_signal_for_symbol(symbol: str) -> tuple[float, Literal["buy", "sell", "hold"]]:
+def _stock_closes(symbol: str, limit: int = 10) -> list[float]:
         """
-        Very simple demo strategy:
-        - Fetch last 10 daily closes
+        Get last `limit` daily close prices for a stock using Yahoo Finance.
+        """
+        data = yf.download(symbol, period="1mo", interval="1d", progress=False)
+        if data.empty:
+                return []
+        closes = data["Close"].tail(limit)
+        return list(closes)
+
+
+def _crypto_closes(symbol: str, limit: int = 10) -> list[float]:
+        """
+        Get last `limit` daily close prices for a crypto using Binance.
+
+        Example symbols:
+            - BTCUSDT
+            - ETHUSDT
+        """
+        base_url = "https://api.binance.com"
+        url = f"{base_url}/api/v3/klines"
+        params = {
+                "symbol": symbol.upper(),
+                "interval": "1d",
+                "limit": limit,
+        }
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        if not data:
+                return []
+        closes = [float(candle[4]) for candle in data]    # index 4 = close price
+        return closes
+
+
+def get_signal_for_symbol(
+        symbol: str,
+        market: MarketType = "stock",
+) -> Tuple[float, Literal["buy", "sell", "hold"]]:
+        """
+        Simple moving-average-based demo strategy.
+
         - If last price > moving average → 'buy'
         - If last price  < moving average → 'sell'
         - Else → 'hold'
-        Returns (prediction_score, recommendation)
-        prediction_score is “distance” from the moving average.
-        NOTE: This is for DEMO ONLY, not financial advice.
+
+        NOTE: Demo only. NOT financial advice.
         """
-        data = yf.download(symbol, period="1mo", interval="1d", progress=False)
-        if data.empty or len(data["Close"])  < 5:
-                # fallback
+
+        if market == "crypto":
+                closes = _crypto_closes(symbol, 10)
+        else:
+                closes = _stock_closes(symbol, 10)
+
+        if not closes or len(closes)  < 5:
                 return 0.0, "hold"
 
-        closes = data["Close"].tail(10)
-        last_price = closes.iloc[-1]
-        ma = closes.mean()
+        last_price = closes[-1]
+        ma = sum(closes) / len(closes)
 
         diff = last_price - ma
-        score = float(diff / ma)    # relative diff
+        score = float(diff / ma)    # relative distance
 
         if score > 0.01:
                 rec = "buy"
