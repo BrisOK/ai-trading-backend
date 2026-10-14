@@ -1,35 +1,9 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+# ... existing schemas ...
 
-class TradeBase(BaseModel):
+
+class SignalRequest(BaseModel):
         symbol: str
-        side: str
-        quantity: float
-        price: float
-
-
-class TradeCreate(TradeBase):
-        pass
-
-
-class Trade(TradeBase):
-        id: int
-        created_at: datetime
-
-        class Config:
-                orm_mode = True
-
-
-class SignalBase(BaseModel):
-        symbol: str
-
-
-class Signal(SignalBase):
-        id: int
-        prediction: float
-        recommendation: str
-        created_at: datetime
-
-        class Config:
-                orm_mode = True
+        market: str = "stock"    # "stock" or "crypto"
