@@ -43,7 +43,6 @@ def create_trade(trade: schemas.TradeCreate, db: Session = Depends(get_db)):
                 raise HTTPException(status_code=400, detail="side must be 'buy' or 'sell'")
         return crud.create_trade(db, trade)
 
-
 @app.get("/signals", response_model=list[schemas.Signal])
 def list_signals(symbol: str | None = None, db: Session = Depends(get_db)):
         return crud.get_signals(db, symbol)
