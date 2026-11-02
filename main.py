@@ -59,7 +59,6 @@ def generate_signal(payload: schemas.SignalRequest, db: Session = Depends(get_db
         signal = crud.create_signal(db, payload.symbol.upper(), prediction, recommendation)
         return signal
 
-
 @app.get("/price")
 def get_price(symbol: str, market: str = "stock"):
         """
